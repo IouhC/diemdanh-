@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Điểm danh hội nghị</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f8f9fa;
+    }
+    h2 {
+      color: #007BFF;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #msg {
+      margin-top: 20px;
+      color: #333;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📍 Điểm danh Hội nghị</h2>
+  <p>Nhấn nút bên dưới để xác nhận vị trí và mở form điểm danh.</p>
+  <button id="btn">Điểm danh ngay</button>
+  <p id="msg"></p>
+
+  <script>
+    // ===== CẤU HÌNH =====
+    const formBase = "https://docs.google.com/forms/d/e/1FAIpQLSfQjMNXIBELZFHuwOhL_qx6qPJHhMoXxryibR2Sdy26VP7BiA/viewform";
+    const entryId = "entry.490058957";
+    const EVENT_LAT = 9.91542280565418;  // Tọa độ hội nghị
+    const EVENT_LON = 105.1438199191262;
+    const ALLOWED_RADIUS = 200; // mét
+
+    // ===== HÀM TÍNH KHOẢNG CÁCH (Haversine) =====
+    function toRad(x) {
+      return x * Math.PI / 180;
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // Bán kính Trái đất (m)
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // ===== XỬ LÝ NÚT =====
+    document.getElementById('btn').addEventListener('click', () => {
+      const msg = document.getElementById('msg');
+      msg.textContent = "📡 Đang lấy vị trí của bạn...";
+
+      if (!navigator.geolocation) {
+        msg.textContent = "❌ Trình duyệt không hỗ trợ định vị.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const dist = haversine(EVENT_LAT, EVENT_LON, lat, lon);
+
+          if (dist > ALLOWED_RADIUS) {
+            msg.textContent = `⚠️ Bạn đang cách hội nghị ${Math.round(dist)} mét — ngoài khu vực cho phép.`;
+            return;
+          }
+
+          const location = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+          msg.textContent = `✅ Vị trí hợp lệ (cách ${Math.round(dist)} m). Đang mở form...`;
+          const fullUrl = `${formBase}?usp=pp_url&${entryId}=${encodeURIComponent(location)}`;
+          window.location.href = fullUrl;
+        },
+        (err) => {
+          msg.textContent = "❌ Không thể lấy vị trí: " + err.message;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  </script>
+</body>
+</html>
